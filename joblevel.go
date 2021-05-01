@@ -7,8 +7,6 @@ import (
 	"github.com/cespare/xxhash/v2"
 )
 
-const Message = "Helloo!"
-
 const dayDuration = 24 * time.Hour
 
 // determine how to scale the max Int64 (largest hash possible) to the max duration of a day
@@ -17,19 +15,16 @@ const hashToDayDurationScaler = float64(dayDuration) / math.MaxUint64
 /*
 
 Problem:
-	We have a set of jobs.  Each job needs to run every X minutes.
+	We have a set of jobs.  Each job needs to run every X minutes/hours/etc.
 	We want to schedule these jobs in a way that spreads the load across the day.
 	When a new job is added we don't want all of the existing jobs to move to different start times of the day.
 
 	A run task scheduler kicks off on a schedule (say every 5 minutes) and needs to determine which jobs to run.
 
-Structures:
+Inputs:
 	Job
 		Identifier (immutable) - string
 		Frequency - golang Duration parsed from "1h" "5m"
-
-
-
 */
 
 // A job that needs to be scheduled during the day
@@ -49,7 +44,7 @@ type Job struct {
 type Jobs []Job
 
 // Returns the duration past midnight when the Job's first start time occurs
-func (j *Job) GetFirstStartTime() time.Duration {
+func (j *Job) getFirstStartTime() time.Duration {
 	// determine hash of the job ID
 	hash := xxhash.Sum64([]byte(j.ID))
 
@@ -63,31 +58,21 @@ func (j *Job) GetFirstStartTime() time.Duration {
 }
 
 // Calculate the number of runs per day for a job
-func (j *Job) RunsPerDay() int32 {
+func (j *Job) RunsPerDay() int {
 	// return int32(math.Floor(float64(dayDuration) / float64(j.Frequency)))
-	return int32(dayDuration / j.Frequency)
+	return int(dayDuration / j.Frequency)
 }
 
 // Set job start times based upon ID hash and frequency
 func (j *Job) ScheduleJob() {
 	j.StartTimes = make([]time.Duration, j.RunsPerDay())
-	j.StartTimes[0] = j.GetFirstStartTime()
+	j.StartTimes[0] = j.getFirstStartTime()
 
-	for i := 1; i < int(j.RunsPerDay()); i++ {
+	for i := 1; i < j.RunsPerDay(); i++ {
 		j.StartTimes[i] = j.StartTimes[i-1] + j.Frequency
 	}
 
 }
-
-// func (jobs Jobs) GetFirstStartTimes() []time.Duration {
-// 	starts := make([]time.Duration, len(jobs))
-
-// 	for i, job := range jobs {
-// 		starts[i] = job.GetFirstStartTime()
-// 	}
-
-// 	return starts
-// }
 
 // Set start times for each job
 func (jobs Jobs) ScheduleJobs() {
@@ -122,4 +107,22 @@ func (j *Job) StartsBetween(fromTime, toTime time.Time) bool {
 		}
 	}
 	return false
+}
+
+func (jobs Jobs) StartingBetween(fromTime, toTime time.Time) Jobs {
+	startingJobs := make(Jobs, 0)
+	for _, j := range jobs {
+		if j.StartsBetween(fromTime, toTime) {
+			startingJobs = append(startingJobs, j)
+		}
+	}
+	return startingJobs
+}
+
+func (jobs Jobs) IDs() []string {
+	IDs := make([]string, len(jobs))
+	for i, _ := range jobs {
+		IDs[i] = jobs[i].ID
+	}
+	return IDs
 }

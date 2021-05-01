@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"math/rand"
 	"strconv"
 	"time"
 
@@ -9,41 +10,34 @@ import (
 )
 
 func main() {
-	log.Print(joblevel.Message)
 
-	jobs := make(joblevel.Jobs, 0)
+	// Make a series of random jobs occurring every 5 to 360 minutes
+	n := 10000
+	jobs := joblevel.Jobs{}
 
-	for i := 0; i < 10; i++ {
-		jobs = append(jobs, joblevel.Job{ID: strconv.Itoa(i), Frequency: time.Hour * 12})
+	for i := 0; i < n; i++ {
+		jobs = append(jobs,
+			joblevel.Job{
+				ID:        strconv.Itoa(i),
+				Frequency: time.Minute * time.Duration(5+rand.Intn(360-5))})
 	}
 
-	for _, job := range jobs {
-		log.Printf("Job %s: %v", job.ID, job.RunsPerDay())
-	}
+	log.Printf("Jobs 1: %v", jobs[1])
 
-	// starts := jobs.GetFirstStartTimes()
-
-	// log.Print(starts)
-
+	// Schedule them randomly throughout the day
+	start := time.Now()
 	jobs.ScheduleJobs()
+	elapsed := time.Since(start)
 
-	log.Print(jobs)
+	log.Printf("Scheduling %v jobs took %v", n, elapsed)
 
-	n := time.Now()
+	log.Printf("Jobs 1: %v", jobs[1])
 
-	log.Print(n)
+	// Determine which jobs should be kicked off during a time period
+	now := time.Now()
+	duration := time.Minute
+	startIDs := jobs.StartingBetween(now, now.Add(duration)).IDs()
 
-	nT := n.Truncate(time.Hour * 24)
-
-	log.Print(nT)
-
-	j := jobs[0]
-	log.Printf("The job: %v", j)
-
-	start := time.Now().Truncate(time.Hour * 24).Add(time.Hour)
-
-	end := start.Add(time.Hour)
-
-	log.Printf("Job starts between %v and %v: %v", start, end, j.StartsBetween(start, end))
+	log.Printf("%v jobs starting in next %v: %v", len(startIDs), duration, startIDs)
 
 }
