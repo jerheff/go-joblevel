@@ -69,7 +69,7 @@ func (j *Job) ScheduleJob() {
 
 // Set start times for each job
 func (jobs Jobs) ScheduleJobs() {
-	for i, _ := range jobs {
+	for i := range jobs {
 		jobs[i].ScheduleJob()
 	}
 }
@@ -144,7 +144,7 @@ func (jobs Jobs) StartingDuringDuration(t time.Time, d time.Duration) Jobs {
 // Return the IDs for the provided jobs
 func (jobs Jobs) IDs() []string {
 	IDs := make([]string, 0)
-	for i, _ := range jobs {
+	for i := range jobs {
 		IDs = append(IDs, jobs[i].ID)
 	}
 	return IDs
@@ -168,7 +168,7 @@ func Deduplicate(values []string) []string {
 // Return all start durations for a given set of Jobs
 func (jobs Jobs) AllStarts() startDurations {
 	starts := make(startDurations, 0)
-	for i, _ := range jobs {
+	for i := range jobs {
 		starts = append(starts, jobs[i].starts...)
 	}
 	return starts
