@@ -77,7 +77,7 @@ func (jobs Jobs) ScheduleJobs() {
 // Determine whether a job is started between a range of times
 func (j *Job) StartsBetween(fromTime, toTime time.Time) (bool, error) {
 	if !fromTime.Before(toTime) {
-		return false, errors.New("fromTime must preceed toTime")
+		return false, errors.New("fromTime must precede toTime")
 	}
 	// Determine the duration after midnight UTC for the endpoints
 	from := fromTime.In(time.UTC).Sub(fromTime.Truncate(time.Hour * 24))
