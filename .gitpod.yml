@@ -1,0 +1,11 @@
+image: gitpod/workspace-full
+
+tasks:
+  - init: GO111MODULE=on go get golang.org/x/tools/gopls@latest
+    command: go get -v -t -d ./...
+
+github:
+  prebuilds:
+    branches: true
+    pullRequests: true
+    addComment: true
