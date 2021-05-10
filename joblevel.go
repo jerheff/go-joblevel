@@ -18,9 +18,9 @@ const dayDuration = 24 * time.Hour
 const hashToDayDurationScaler = float64(dayDuration) / math.MaxUint64
 
 // a series of start times across the day
-type startDurations []time.Duration
+type StartDurations []time.Duration
 
-// A job that needs to be scheduled during the day
+// Job represents a task that needs to be scheduled during the day
 type Job struct {
 	// A unique identifier for the job that doesn't change often
 	ID string
@@ -30,10 +30,10 @@ type Job struct {
 	Frequency time.Duration
 
 	// Calculated start times across the day
-	starts startDurations
+	starts StartDurations
 }
 
-// A slice of Jobs
+// Jobs represent a collection of Job items
 type Jobs []Job
 
 // Returns the duration past midnight when the Job's first start time occurs
@@ -50,38 +50,38 @@ func (j *Job) getFirstStart() time.Duration {
 	return time.Duration(hashScaled)
 }
 
-// Calculate the number of runs per day for a job
+// RunsPerDay calculcates the number of runs per day for a job
 func (j *Job) RunsPerDay() int {
 	// return int32(math.Floor(float64(dayDuration) / float64(j.Frequency)))
 	return int(dayDuration / j.Frequency)
 }
 
-// Set job start times based upon ID hash and frequency
+// ScheduleJob sets start times based upon ID hash and frequency
 func (j *Job) ScheduleJob() {
-	j.starts = make(startDurations, j.RunsPerDay())
+	j.starts = make(StartDurations, j.RunsPerDay())
 	j.starts[0] = j.getFirstStart()
 
 	for i := 1; i < j.RunsPerDay(); i++ {
 		j.starts[i] = j.starts[i-1] + j.Frequency
 	}
-
 }
 
-// Set start times for each job
+// ScheduleJobs runs ScheduleJob on each each job
 func (jobs Jobs) ScheduleJobs() {
-	for i, _ := range jobs {
+	for i := range jobs {
 		jobs[i].ScheduleJob()
 	}
 }
 
-// Determine whether a job is started between a range of times
+// StartsBetween determines whether a job starts between a range of times
 func (j *Job) StartsBetween(fromTime, toTime time.Time) (bool, error) {
 	if !fromTime.Before(toTime) {
-		return false, errors.New("fromTime must preceed toTime")
+		return false, errors.New("fromTime must precede toTime")
 	}
 	// Determine the duration after midnight UTC for the endpoints
-	from := fromTime.In(time.UTC).Sub(fromTime.Truncate(time.Hour * 24))
-	to := toTime.In(time.UTC).Sub(toTime.Truncate(time.Hour * 24))
+	const hoursPerDay = 24
+	from := fromTime.In(time.UTC).Sub(fromTime.Truncate(time.Hour * hoursPerDay))
+	to := toTime.In(time.UTC).Sub(toTime.Truncate(time.Hour * hoursPerDay))
 	// log.Printf("from %v to %v", from, to)
 
 	// for any of the job startimes
@@ -89,8 +89,8 @@ func (j *Job) StartsBetween(fromTime, toTime time.Time) (bool, error) {
 	return len(filteredStarts) > 0, nil
 }
 
-// Filters to start times that occur between the given range
-func (starts startDurations) startsBetween(from, to time.Duration, firstOnly bool) startDurations {
+// startsBetween filters to start times that occur between the given range
+func (starts StartDurations) startsBetween(from, to time.Duration, firstOnly bool) StartDurations {
 	filteredStarts := make([]time.Duration, 0)
 
 	for _, s := range starts {
@@ -115,7 +115,7 @@ func (starts startDurations) startsBetween(from, to time.Duration, firstOnly boo
 	return filteredStarts
 }
 
-// Filter jobs to those that start between the given times
+// StartingBetween filters jobs to those that start between the given times
 func (jobs Jobs) StartingBetween(fromTime, toTime time.Time) Jobs {
 	startingJobs := make(Jobs, 0)
 	for _, j := range jobs {
@@ -127,24 +127,24 @@ func (jobs Jobs) StartingBetween(fromTime, toTime time.Time) Jobs {
 	return startingJobs
 }
 
-// Find durationg containing the given time
+// DurationContaining finds duration containing the given time
 func DurationContaining(d time.Duration, t time.Time) (fromTime, toTime time.Time) {
 	fromTime = t.Truncate(d)
 	toTime = fromTime.Add(d)
 	return
 }
 
-// Filters jobs to those starting during the rounded duration containing the given time
+// StartingDuringDuration filters jobs to those starting during the duration containing the given time
 // For instance, setting 12:07pm and a 1 hour duration returns jobs between noon and 1pm
 func (jobs Jobs) StartingDuringDuration(t time.Time, d time.Duration) Jobs {
 	fromTime, toTime := DurationContaining(d, t)
 	return jobs.StartingBetween(fromTime, toTime)
 }
 
-// Return the IDs for the provided jobs
+// IDs returns the IDs for the provided jobs
 func (jobs Jobs) IDs() []string {
 	IDs := make([]string, 0)
-	for i, _ := range jobs {
+	for i := range jobs {
 		IDs = append(IDs, jobs[i].ID)
 	}
 	return IDs
@@ -165,16 +165,17 @@ func Deduplicate(values []string) []string {
 	return outputs
 }
 
-// Return all start durations for a given set of Jobs
-func (jobs Jobs) AllStarts() startDurations {
-	starts := make(startDurations, 0)
-	for i, _ := range jobs {
-		starts = append(starts, jobs[i].starts...)
-	}
-	return starts
-}
+// AllStarts returns all start durations for a given set of Jobs
+// func (jobs Jobs) AllStarts() StartDurations {
+// 	starts := make(StartDurations, 0)
+// 	for i := range jobs {
+// 		starts = append(starts, jobs[i].starts...)
+// 	}
+// 	return starts
+// }
 
-// Returns a record for each start time of each Job
+// ScheduleStartRecrods returns a record for each start time of each Job
+// containing the job ID and the starting time as a duration string
 func (jobs Jobs) ScheduledStartRecords() [][]string {
 	records := make([][]string, 0)
 	for _, j := range jobs {
@@ -186,11 +187,12 @@ func (jobs Jobs) ScheduledStartRecords() [][]string {
 	return records
 }
 
-// Create new Job with given ID
+// NewJob creates new Job with given ID
 func NewJob(id string) *Job {
 	return &Job{ID: id}
 }
 
+// WithFrequency sets the Frequency for the Job via a string ("5m") or time.Duration
 func (j Job) WithFrequency(frequency interface{}) Job {
 	switch v := frequency.(type) {
 	case string:
@@ -202,12 +204,12 @@ func (j Job) WithFrequency(frequency interface{}) Job {
 	case time.Duration:
 		j.Frequency = v
 	default:
-		panic(errors.New("Unknown frequency type"))
+		panic(errors.New("unknown frequency type"))
 	}
 	return j
 }
 
-// Load Jobs from a CSV
+// NewJobsFromCSV loads Jobs from a CSV
 func NewJobsFromCSV(r io.Reader) Jobs {
 	newJobs := make(Jobs, 0)
 
@@ -228,7 +230,7 @@ func NewJobsFromCSV(r io.Reader) Jobs {
 	return newJobs
 }
 
-// Write a CSV of Jobs to the provided io.Writer
+// CSV writes a CSV of Jobs to the provided io.Writer
 func (jobs Jobs) CSV(w io.Writer) error {
 	s, err := gocsv.MarshalString(jobs)
 	if err != nil {
@@ -241,11 +243,18 @@ func (jobs Jobs) CSV(w io.Writer) error {
 	return nil
 }
 
-// Write CSV of Job start IDs and starts
+// ScheduleCSV writes a CSV of Job start IDs and starts
 // with one line per job start duration
-func (jobs Jobs) ScheduleCSV(w io.Writer) {
+func (jobs Jobs) ScheduleCSV(w io.Writer) error {
 	csvwriter := csv.NewWriter(w)
-	csvwriter.Write([]string{"ID", "StartDurationAfterMidnightUTC"})
-	csvwriter.WriteAll(jobs.ScheduledStartRecords())
+	err := csvwriter.Write([]string{"ID", "StartDurationAfterMidnightUTC"})
+	if err != nil {
+		return err
+	}
+	err = csvwriter.WriteAll(jobs.ScheduledStartRecords())
+	if err != nil {
+		return err
+	}
 	csvwriter.Flush()
+	return nil
 }

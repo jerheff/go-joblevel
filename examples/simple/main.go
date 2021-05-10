@@ -59,6 +59,6 @@ func main() {
 	jobStartsFile, _ := os.Create("jobstarts.csv")
 	defer jobStartsFile.Close()
 
-	jobs.ScheduleCSV(jobStartsFile)
+	_ := jobs.ScheduleCSV(jobStartsFile)
 
 }
