@@ -166,13 +166,13 @@ func Deduplicate(values []string) []string {
 }
 
 // AllStarts returns all start durations for a given set of Jobs
-func (jobs Jobs) AllStarts() StartDurations {
-	starts := make(StartDurations, 0)
-	for i := range jobs {
-		starts = append(starts, jobs[i].starts...)
-	}
-	return starts
-}
+// func (jobs Jobs) AllStarts() StartDurations {
+// 	starts := make(StartDurations, 0)
+// 	for i := range jobs {
+// 		starts = append(starts, jobs[i].starts...)
+// 	}
+// 	return starts
+// }
 
 // ScheduleStartRecrods returns a record for each start time of each Job
 // containing the job ID and the starting time as a duration string
@@ -245,15 +245,16 @@ func (jobs Jobs) CSV(w io.Writer) error {
 
 // ScheduleCSV writes a CSV of Job start IDs and starts
 // with one line per job start duration
-func (jobs Jobs) ScheduleCSV(w io.Writer) {
+func (jobs Jobs) ScheduleCSV(w io.Writer) error {
 	csvwriter := csv.NewWriter(w)
 	err := csvwriter.Write([]string{"ID", "StartDurationAfterMidnightUTC"})
 	if err != nil {
-		panic(err)
+		return err
 	}
 	err = csvwriter.WriteAll(jobs.ScheduledStartRecords())
 	if err != nil {
-		panic(err)
+		return err
 	}
 	csvwriter.Flush()
+	return nil
 }

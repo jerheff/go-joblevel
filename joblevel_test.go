@@ -114,13 +114,24 @@ func Test(t *testing.T) {
 			g.Assert(roundtripJobs).Equal(jobs)
 		})
 
+		g.It("should save a schedule CSV properly", func() {
+			var buf bytes.Buffer
+			err := jobs.ScheduleCSV(&buf)
+			g.Assert(err).IsNil()
+		})
+
 		g.It("should be scheduled at different times even for the same frequency", func() {
 			g.Assert(jobs[0].starts[0] == jobs[1].starts[0]).IsFalse()
 		})
 
-		g.It("should determine which jobs to run", func() {
+		g.It("should determine which jobs to run between two times", func() {
 			toRun := jobs.StartingBetween(now, now.Add(time.Minute*30)).IDs()
 			g.Assert(len(toRun) != len(jobs)).IsTrue()
+		})
+
+		g.It("should determine which jobs to run during a rounded duration", func() {
+			toRun := jobs.StartingDuringDuration(now, time.Hour).IDs()
+			g.Assert(len(toRun)).Equal(len(jobs))
 		})
 
 		g.It("should work across many job frequencies", func() {
