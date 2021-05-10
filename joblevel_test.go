@@ -14,6 +14,8 @@ import (
 func Test(t *testing.T) {
 	g := Goblin(t)
 
+	now := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
+
 	g.Describe("Job", func() {
 		g.It("should be created correctly from a duration string", func() {
 			job := NewJob("abc").WithFrequency("5m")
@@ -54,13 +56,9 @@ func Test(t *testing.T) {
 		})
 	})
 
-	job := Job{Frequency: time.Hour, starts: startDurations{time.Hour}}
-
-	job = Job{Frequency: time.Hour, starts: startDurations{time.Hour}}
-	// job.ScheduleJob()
-	now := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
-
 	g.Describe("Job:StartsBetween", func() {
+		job := Job{Frequency: time.Hour, starts: StartDurations{time.Hour}}
+
 		g.It("should error when from is after to", func() {
 			_, err := job.StartsBetween(now.Add(time.Hour), now.Add(time.Minute))
 			g.Assert(err).IsNotNil()
@@ -109,7 +107,9 @@ func Test(t *testing.T) {
 			g.Assert(jobs[1].Frequency).Equal(time.Hour)
 
 			var buf bytes.Buffer
-			jobs.CSV(&buf)
+			err := jobs.CSV(&buf)
+			g.Assert(err).IsNil()
+
 			roundtripJobs := NewJobsFromCSV(strings.NewReader(buf.String()))
 			g.Assert(roundtripJobs).Equal(jobs)
 		})
